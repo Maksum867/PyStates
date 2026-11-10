@@ -42,6 +42,7 @@ venv.bak/
 *.md
 *.txt
 !README.md
+!CHANGELOG.md
 # Build artefacts
 dist/
 build/
