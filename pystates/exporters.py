@@ -75,6 +75,25 @@ def build_filename(title: str, output_format: str = "md", custom_filename: str |
     return f"{base_name}.{fmt}"
 
 
+_MD_IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+_MD_LINK = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+_MD_HEADING = re.compile(r"^#{1,6}\s+", flags=re.M)
+_MD_BOLD = re.compile(r"(\*\*|__)(.+?)\1")
+_MD_ITALIC = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
+_MD_CODE = re.compile(r"`([^`]+)`")
+
+
+def markdown_to_plain(text: str) -> str:
+    """Strip the most common markdown markers so .txt output stays plain."""
+    text = _MD_IMAGE.sub("", text)
+    text = _MD_LINK.sub(r"\1", text)
+    text = _MD_HEADING.sub("", text)
+    text = _MD_BOLD.sub(r"\2", text)
+    text = _MD_ITALIC.sub(r"\1", text)
+    text = _MD_CODE.sub(r"\1", text)
+    return text
+
+
 def format_article(
     title: str,
     content: str,
@@ -109,6 +128,9 @@ def format_article(
         parts += [body, ""]
         return "\n".join(parts)
 
+    # The extractor runs in markdown mode; a plain-text export must not
+    # inherit "**bold**", "## heading" or "[link](url)" markers.
+    body = markdown_to_plain(body)
     underline = "=" * max(len(title), 1)
     parts = [title, underline, ""]
     if byline:

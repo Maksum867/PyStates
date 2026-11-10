@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pathlib
+
 from pystates.exporters import build_filename, format_article, save_article
 
 
@@ -106,3 +108,34 @@ class TestSaveArticle:
         path = save_article("T", "line1\nline2", "txt", output_dir=str(tmp_path))
         raw = (tmp_path / f"{path.split('/')[-1]}").read_bytes()
         assert b"\r\n" not in raw
+
+
+class TestMarkdownToPlain:
+    def test_strips_headings_bold_italic_and_links(self):
+        from pystates.exporters import markdown_to_plain
+
+        raw = "## Heading\n\nSome **bold** and *ital* text with a [link](https://x.test) and `code`."
+        assert markdown_to_plain(raw) == "Heading\n\nSome bold and ital text with a link and code."
+
+    def test_strips_images_entirely(self):
+        from pystates.exporters import markdown_to_plain
+
+        assert markdown_to_plain("text ![alt](img.png) more") == "text  more"
+
+    def test_plain_text_export_has_no_markdown_markers(self, tmp_path):
+        content = "## Section\n\nText with **emphasis** and a [link](https://x.test)."
+        path = save_article("T", content, "txt", output_dir=str(tmp_path))
+        written = pathlib.Path(path).read_text(encoding="utf-8")
+        assert "**" not in written
+        assert "##" not in written
+        assert "](https" not in written
+        assert "emphasis" in written
+
+
+class TestParagraphStructure:
+    def test_markdown_export_keeps_paragraph_breaks(self, tmp_path):
+        content = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
+        path = save_article("T", content, "md", output_dir=str(tmp_path))
+        written = pathlib.Path(path).read_text(encoding="utf-8")
+        assert "First paragraph.\n\nSecond paragraph." in written
+        assert written.count("\n\n") >= 3

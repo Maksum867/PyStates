@@ -37,12 +37,19 @@ def extract_article(html: str | bytes, url: str | None = None) -> dict:
         payload = html
 
     metadata = trafilatura.extract_metadata(payload)
+    # ``output_format="markdown"`` + ``include_formatting=True`` keeps paragraph
+    # breaks and emphasis. The default ("txt") output joins every paragraph into
+    # one giant line, which makes the exported file unreadable for long articles.
+    # ``favor_precision`` drops inline promo/boilerplate that the recall-oriented
+    # default happily keeps (e.g. subscribe banners in the middle of the text).
     text = trafilatura.extract(
         payload,
         url=url,
         include_comments=False,
         include_tables=True,
-        favor_precision=False,
+        favor_precision=True,
+        output_format="markdown",
+        include_formatting=True,
     )
 
     if not text:
