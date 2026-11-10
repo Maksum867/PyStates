@@ -9,6 +9,10 @@ from pystates import __version__
 from pystates.exporters import save_article
 from pystates.parser import ParseError, fetch_and_parse_article
 
+#: Below this many characters the "article" is almost certainly a nav page,
+#: a paywall stub or a JavaScript-rendered listing rather than real content.
+MIN_USEFUL_CHARS = 400
+
 
 def build_parser() -> argparse.ArgumentParser:
     from pystates.exporters import SUPPORTED_FORMATS as FORMATS
@@ -60,6 +64,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Downloading article from: {args.url}...")
 
         article = fetch_and_parse_article(args.url)
+
+        if len(article["content"]) < MIN_USEFUL_CHARS:
+            print(
+                "Warning: extracted text is very short "
+                f"({len(article['content'])} characters). The page may be a listing, "
+                "a paywall stub, or rendered by JavaScript — try a direct article URL.",
+                file=sys.stderr,
+            )
 
         saved_file = save_article(
             title=article["title"],

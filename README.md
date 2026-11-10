@@ -28,7 +28,7 @@ pystates -u https://www.newyorker.com/magazine/2025/01/20/the-new-ai-era
 - 🚀 **Blazing Fast** — Downloads and processes articles in under 3 seconds
 - 🛡️ **403 Bypass** — Smart custom `User-Agent` headers to reliably avoid common blocks
 - 🧼 **Pristine Extraction** — Powered by Trafilatura for the cleanest possible text
-- 📝 **Dual Format Support** — Native `.md` (with headings, emphasis, and structure) or `.txt`
+- 📝 **Four Output Formats** — Markdown (`.md`), Plain Text (`.txt`), Word (`.docx`) and PDF (`.pdf`)
 - 🧹 **Intelligent Filename Sanitization** — Generates safe OS filenames from article titles **without using `re`**
 - ✍️ **Custom Filenames** — Override auto-generated names with the `-o` flag
 - 🐍 **Modern Python Stack** — Built for Python 3.10+ with clean architecture
@@ -45,6 +45,19 @@ cd pystates
 # 2. Install in editable/development mode
 pip install -e .
 ```
+
+### Optional: Word and PDF output
+
+`md` and `txt` work out of the box. Word and PDF output need extra dependencies:
+
+```bash
+pip install "pystates-CLI[word]"   # .docx  (python-docx)
+pip install "pystates-CLI[pdf]"    # .pdf   (reportlab)
+pip install "pystates-CLI[word,pdf]"  # both
+```
+
+If a format is requested without its dependency installed, the CLI exits with a
+clear message telling you which extra to install.
 
 ### Verify Installation
 
@@ -72,7 +85,7 @@ pystates -u URL [OPTIONS]
 | Short | Long        | Required | Default | Description |
 |-------|-------------|----------|---------|-------------|
 | `-u`  | `--url`     | **Yes**  | —       | The full URL of the article to fetch and process |
-| `-f`  | `--format`  | No       | `md`    | Output format. Accepted values: `md` or `txt` |
+| `-f`  | `--format`  | No       | `md`    | Output format: `md`, `txt`, `docx` (Word) or `pdf` |
 | `-o`  | `--output`  | No       | *(auto)* | Custom output filename. Any directory component is stripped; a matching extension is normalised |
 | `-d`  | `--output-dir` | No    | `.`      | Directory to write the file into |
 | `-q`  | `--quiet`   | No       | off     | Suppress progress output (useful in cron jobs and CI) |
@@ -115,7 +128,17 @@ pystates \
   --output "end_of_internet"
 ```
 
-#### 5. View all options
+#### 5. Export to Word or PDF
+
+```bash
+pystates -u "https://www.newyorker.com/books/page-turner/what-is-biography-for" -f docx
+pystates -u "https://en.wikipedia.org/wiki/Ada_Lovelace" -f pdf
+```
+
+→ Creates `What_Is_Biography_For.docx` / `Ada_Lovelace.pdf`, with a proper title,
+byline (author · date · publication) and one paragraph per source paragraph.
+
+#### 6. View all options
 
 ```bash
 pystates --help
@@ -148,7 +171,7 @@ PyStates/
 │   ├── __init__.py          # Package metadata & version
 │   ├── __main__.py          # Entry point for `python -m pystates`
 │   ├── cli.py               # Argument parsing (argparse)
-│   ├── exporters.py         # Filename sanitization + .md/.txt formatting
+│   ├── exporters.py         # Filename sanitization + md/txt/docx/pdf export
 │   └── parser.py            # HTTP fetching (custom UA) + Trafilatura parsing
 │   └── tests/               # 75 pytest tests (unit + real-HTTP integration)
 ├── .github/
@@ -161,6 +184,22 @@ PyStates/
 ├── .gitignore
 └── README.md
 ```
+
+## ⚠️ Known limitations
+
+- **JavaScript-only pages are not supported.** PyStates downloads the HTML the
+  server sends; sites that render the article in the browser (client-side React
+  apps) may return a listing page or a paywall stub instead of the article.
+  When the extracted text is suspiciously short, the CLI prints a warning on
+  stderr and still writes the file.
+- **Bot protection blocks some sites.** With a plain HTTP client, sites behind
+  Cloudflare/Akamai may answer `403`/`401`. PyStates reports the HTTP error and
+  exits with status `1`.
+- **PDF fonts.** A Unicode TTF (DejaVu/Liberation) is used when present on the
+  system, so Cyrillic and CJK render correctly on most Linux images and macOS;
+  elsewhere ReportLab falls back to Helvetica, which only covers Latin-1.
+- **The default User-Agent is a fixed desktop Chrome string.** It is not
+  rotated, and it is not a "403 bypass".
 
 ## 🧪 Development & Testing
 

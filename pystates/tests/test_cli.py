@@ -53,7 +53,7 @@ class TestArguments:
 
     def test_invalid_format_rejected(self, capsys):
         with pytest.raises(SystemExit) as excinfo:
-            cli.main(["-u", "https://example.com", "-f", "pdf"])
+            cli.main(["-u", "https://example.com", "-f", "rtf"])
         assert excinfo.value.code == 2
 
     def test_output_dir_flag_is_accepted(self, fake_fetch, tmp_path):

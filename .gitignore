@@ -50,3 +50,6 @@ build/
 # Tooling caches
 .pytest_cache/
 .ruff_cache/
+
+# Files written by the test suite / manual runs
+Example_Domain.*

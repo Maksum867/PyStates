@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+from xml.sax.saxutils import escape as _xml_escape
 
 # Windows reserved device names: creating ``con.md`` fails on Windows.
 _RESERVED_NAMES = {
@@ -23,7 +24,7 @@ FORBIDDEN_CHARS = ["/", "\\", ":", "*", "?", '"', "<", ">", "|", "\x00"]
 #: Keep filenames below the common 255-byte limit with room for an extension.
 MAX_BASENAME_LENGTH = 120
 
-SUPPORTED_FORMATS = ("md", "txt")
+SUPPORTED_FORMATS = ("md", "txt", "docx", "pdf")
 
 
 def sanitize_filename(filename: str) -> str:
@@ -156,19 +157,173 @@ def save_article(
     filename = build_filename(title, output_format, custom_filename)
     fmt = filename.rsplit(".", 1)[-1]
 
-    formatted_text = format_article(
-        title=title,
-        content=content,
-        output_format=fmt,
-        author=author,
-        date=date,
-        sitename=sitename,
-        url=url,
-    )
-
     path = os.path.join(output_dir, filename) if output_dir else filename
 
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(formatted_text)
+    if fmt == "docx":
+        write_docx(path, title, content, author=author, date=date, sitename=sitename, url=url)
+    elif fmt == "pdf":
+        write_pdf(path, title, content, author=author, date=date, sitename=sitename, url=url)
+    else:
+        formatted_text = format_article(
+            title=title,
+            content=content,
+            output_format=fmt,
+            author=author,
+            date=date,
+            sitename=sitename,
+            url=url,
+        )
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(formatted_text)
 
+    return path
+
+
+def _paragraphs(markdown_text: str) -> list[str]:
+    """Split extracted markdown into cleaned plain-text blocks."""
+    plain = markdown_to_plain(markdown_text)
+    return [block.strip() for block in plain.split("\n\n") if block.strip()]
+
+
+def write_docx(
+    path: str,
+    title: str,
+    content: str,
+    author: str | None = None,
+    date: str | None = None,
+    sitename: str | None = None,
+    url: str | None = None,
+) -> str:
+    """Write the article as a Word (.docx) document."""
+    try:
+        from docx import Document
+    except ImportError as exc:  # pragma: no cover - dependency guard
+        raise RuntimeError("Word export needs python-docx. Install it with: pip install 'pystates-CLI[word]'") from exc
+
+    document = Document()
+    document.add_heading(title, level=0)
+
+    byline_parts = []
+    if author:
+        byline_parts.append(f"By {author}")
+    if date:
+        byline_parts.append(str(date))
+    if sitename:
+        byline_parts.append(str(sitename))
+    if byline_parts:
+        byline = document.add_paragraph(" · ".join(byline_parts))
+        byline.runs[0].italic = True
+    if url:
+        document.add_paragraph(url)
+
+    for block in _paragraphs(content):
+        document.add_paragraph(block)
+
+    document.save(path)
+    return path
+
+
+def _register_pdf_fonts() -> dict[str, str]:
+    """Return font names, registering a Unicode TTF when one is available."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    candidates = [
+        (
+            "DejaVu",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+        ),
+        ("DejaVu", "/usr/share/fonts/dejavu/DejaVuSerif.ttf", "/usr/share/fonts/dejavu/DejaVuSerif-Bold.ttf"),
+        (
+            "Liberation",
+            "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+        ),
+    ]
+    for name, regular, bold in candidates:
+        if os.path.exists(regular):
+            pdfmetrics.registerFont(TTFont(name, regular))
+            if os.path.exists(bold):
+                pdfmetrics.registerFont(TTFont(name + "-Bold", bold))
+                return {"regular": name, "bold": name + "-Bold"}
+            return {"regular": name, "bold": name}
+    return {"regular": "Helvetica", "bold": "Helvetica-Bold"}
+
+
+def write_pdf(
+    path: str,
+    title: str,
+    content: str,
+    author: str | None = None,
+    date: str | None = None,
+    sitename: str | None = None,
+    url: str | None = None,
+) -> str:
+    """Write the article as a PDF document."""
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import mm
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+    except ImportError as exc:  # pragma: no cover - dependency guard
+        raise RuntimeError("PDF export needs reportlab. Install it with: pip install 'pystates-CLI[pdf]'") from exc
+
+    fonts = _register_pdf_fonts()
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "PyStatesTitle",
+        parent=styles["Title"],
+        fontName=fonts["bold"],
+        fontSize=20,
+        leading=24,
+        spaceAfter=10,
+    )
+    meta_style = ParagraphStyle(
+        "PyStatesMeta",
+        parent=styles["Normal"],
+        fontName=fonts["regular"],
+        fontSize=9,
+        leading=13,
+        textColor="#555555",
+        spaceAfter=6,
+    )
+    body_style = ParagraphStyle(
+        "PyStatesBody",
+        parent=styles["BodyText"],
+        fontName=fonts["regular"],
+        fontSize=10.5,
+        leading=15.5,
+        spaceAfter=8,
+    )
+
+    document = SimpleDocTemplate(
+        path,
+        pagesize=A4,
+        leftMargin=22 * mm,
+        rightMargin=22 * mm,
+        topMargin=20 * mm,
+        bottomMargin=20 * mm,
+        title=title,
+    )
+
+    flow = [Paragraph(_xml_escape(title), title_style)]
+
+    byline_parts = []
+    if author:
+        byline_parts.append(f"By {author}")
+    if date:
+        byline_parts.append(str(date))
+    if sitename:
+        byline_parts.append(str(sitename))
+    if byline_parts:
+        flow.append(Paragraph(_xml_escape(" · ".join(byline_parts)), meta_style))
+    if url:
+        flow.append(Paragraph(_xml_escape(url), meta_style))
+    flow.append(Spacer(1, 6))
+
+    for block in _paragraphs(content):
+        flow.append(Paragraph(_xml_escape(block), body_style))
+
+    document.build(flow)
     return path

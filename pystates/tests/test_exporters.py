@@ -15,7 +15,7 @@ class TestBuildFilename:
         assert build_filename("Test", "txt") == "Test.txt"
 
     def test_unknown_format_falls_back_to_markdown(self):
-        assert build_filename("Test", "pdf") == "Test.md"
+        assert build_filename("Test", "rtf") == "Test.md"
 
     def test_custom_name_without_extension(self):
         assert build_filename("Ignored", "md", "my_article") == "my_article.md"
