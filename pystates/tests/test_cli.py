@@ -127,3 +127,19 @@ class TestErrors:
         monkeypatch.setattr(cli, "fetch_and_parse_article", ok)
         code = cli.main(["-u", "https://example.com", "-d", "/root/../proc/forbidden", "-q"])
         assert code == 1
+
+
+class TestPruneFlag:
+    def test_no_prune_flag_is_forwarded(self, monkeypatch, tmp_path):
+        captured = {}
+
+        def fake(url, prune=True, **kwargs):
+            captured["prune"] = prune
+            return dict(ARTICLE)
+
+        monkeypatch.setattr(cli, "fetch_and_parse_article", fake)
+        cli.main(["-u", "https://example.com", "-d", str(tmp_path), "-q"])
+        assert captured["prune"] is True
+
+        cli.main(["-u", "https://example.com", "-d", str(tmp_path), "-q", "--no-prune"])
+        assert captured["prune"] is False

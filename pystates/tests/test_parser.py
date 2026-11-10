@@ -128,3 +128,52 @@ class TestFetchLayer:
         monkeypatch.setattr(parser.requests, "get", fake_get)
         fetch_html("https://example.com")
         assert captured["timeout"] == parser.DEFAULT_TIMEOUT
+
+
+class TestPruning:
+    def test_prune_xpaths_are_passed_by_default(self, monkeypatch):
+        captured = {}
+
+        def fake_extract(payload, **kwargs):
+            captured.update(kwargs)
+            return "Body text"
+
+        monkeypatch.setattr(parser.trafilatura, "extract", fake_extract)
+        monkeypatch.setattr(parser.trafilatura, "extract_metadata", lambda *a, **kw: None)
+        extract_article("<html><body><p>Body text</p></body></html>")
+        assert captured["prune_xpath"], "prune rules must be applied by default"
+        assert any("related" in rule for rule in captured["prune_xpath"])
+
+    def test_prune_can_be_disabled(self, monkeypatch):
+        captured = {}
+
+        def fake_extract(payload, **kwargs):
+            captured.update(kwargs)
+            return "Body text"
+
+        monkeypatch.setattr(parser.trafilatura, "extract", fake_extract)
+        monkeypatch.setattr(parser.trafilatura, "extract_metadata", lambda *a, **kw: None)
+        extract_article("<html><body><p>Body text</p></body></html>", prune=False)
+        assert captured["prune_xpath"] is None
+
+    def test_related_block_is_removed(self, article_html):
+        # A "related articles" aside must not leak into the exported text.
+        html = article_html.replace(
+            "</article>",
+            "</article><aside class='related-articles'>Read next: Something Else Entirely</aside>",
+        )
+        result = extract_article(html)
+        assert "Read next" not in result["content"]
+
+    def test_newsletter_block_is_removed(self, article_html):
+        html = article_html.replace(
+            "</article>",
+            "</article><div class='newsletter-signup'>Subscribe to our daily newsletter!</div>",
+        )
+        result = extract_article(html)
+        assert "Subscribe to our daily" not in result["content"]
+
+    def test_prune_rules_cover_known_container_names(self):
+        rules = " ".join(parser.PRUNE_XPATHS)
+        for token in ("related", "newsletter", "subscribe", "deepDive", "stayConnected"):
+            assert token in rules

@@ -28,6 +28,7 @@ pystates -u https://www.newyorker.com/magazine/2025/01/20/the-new-ai-era
 - 🚀 **Blazing Fast** — Downloads and processes articles in under 3 seconds
 - 🛡️ **403 Bypass** — Smart custom `User-Agent` headers to reliably avoid common blocks
 - 🧼 **Pristine Extraction** — Powered by Trafilatura for the cleanest possible text
+- 🚫 **Furniture Removal** — "related articles", newsletter and promo blocks are pruned before extraction, so the file contains only the article (override with `--no-prune`)
 - 📝 **Four Output Formats** — Markdown (`.md`), Plain Text (`.txt`), Word (`.docx`) and PDF (`.pdf`)
 - 🧹 **Intelligent Filename Sanitization** — Generates safe OS filenames from article titles **without using `re`**
 - ✍️ **Custom Filenames** — Override auto-generated names with the `-o` flag
@@ -89,6 +90,7 @@ pystates -u URL [OPTIONS]
 | `-o`  | `--output`  | No       | *(auto)* | Custom output filename. Any directory component is stripped; a matching extension is normalised |
 | `-d`  | `--output-dir` | No    | `.`      | Directory to write the file into |
 | `-q`  | `--quiet`   | No       | off     | Suppress progress output (useful in cron jobs and CI) |
+|       | `--no-prune` | No      | off     | Keep "related articles" / newsletter blocks that are stripped by default |
 |       | `--version` | No       | —       | Print the version and exit |
 
 ### Examples

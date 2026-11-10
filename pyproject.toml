@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pystates-CLI"
-version = "0.3.0"
+version = "0.2.0"
 description = "CLI tool to download and save articles from various web resources into Markdown, Text, and other formats."
 readme = "README.md"
 requires-python = ">=3.9"

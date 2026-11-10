@@ -6,6 +6,33 @@ import requests
 import trafilatura
 
 DEFAULT_TIMEOUT = 15
+
+#: Containers that hold "related articles", newsletter boxes, promo blocks and
+#: other furniture that sits *inside* the article body and survives extraction.
+#: Pruned before extraction so the exported file contains only the article.
+PRUNE_XPATHS = [
+    ".//aside",
+    ".//footer",
+    ".//*[contains(@class, 'related')]",
+    ".//*[contains(@class, 'recommend')]",
+    ".//*[contains(@class, 'newsletter')]",
+    ".//*[contains(@class, 'subscribe')]",
+    ".//*[contains(@class, 'subscription')]",
+    ".//*[contains(@class, 'promo')]",
+    ".//*[contains(@class, 'outbrain')]",
+    ".//*[contains(@class, 'taboola')]",
+    ".//*[contains(@class, 'more-stories')]",
+    ".//*[contains(@class, 'read-more')]",
+    # Site-specific containers. "Deep Dive" / "Stay connected" blocks on
+    # technologyreview.com use hashed class names (deepDive__wrapper--<hash>),
+    # so a generic 'related' rule never matches them.
+    ".//*[contains(@class, 'deepDive')]",
+    ".//*[contains(@class, 'stayConnected')]",
+    ".//*[contains(@class, 'componentGroups')]",
+    ".//*[contains(@class, 'newsletter-signup')]",
+    ".//*[contains(@id, 'related')]",
+    ".//*[contains(@id, 'newsletter')]",
+]
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
@@ -29,7 +56,11 @@ def fetch_html(url: str, timeout: int = DEFAULT_TIMEOUT) -> bytes:
     return response.content
 
 
-def extract_article(html: str | bytes, url: str | None = None) -> dict:
+def extract_article(
+    html: str | bytes,
+    url: str | None = None,
+    prune: bool = True,
+) -> dict:
     """Extract title, text and metadata from raw HTML."""
     if isinstance(html, bytes):
         payload: str | bytes = html
@@ -50,6 +81,7 @@ def extract_article(html: str | bytes, url: str | None = None) -> dict:
         favor_precision=True,
         output_format="markdown",
         include_formatting=True,
+        prune_xpath=list(PRUNE_XPATHS) if prune else None,
     )
 
     if not text:
@@ -80,7 +112,11 @@ def extract_article(html: str | bytes, url: str | None = None) -> dict:
     }
 
 
-def fetch_and_parse_article(url: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
+def fetch_and_parse_article(
+    url: str,
+    timeout: int = DEFAULT_TIMEOUT,
+    prune: bool = True,
+) -> dict:
     """Download ``url`` and return its parsed article data."""
     html = fetch_html(url, timeout=timeout)
-    return extract_article(html, url=url)
+    return extract_article(html, url=url, prune=prune)

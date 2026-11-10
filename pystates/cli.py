@@ -42,6 +42,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory to write the file into (default: current directory)",
     )
     parser.add_argument(
+        "--no-prune",
+        action="store_true",
+        help="Keep related-article and newsletter blocks that are pruned by default",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
@@ -63,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
         if not args.quiet:
             print(f"Downloading article from: {args.url}...")
 
-        article = fetch_and_parse_article(args.url)
+        article = fetch_and_parse_article(args.url, prune=not args.no_prune)
 
         if len(article["content"]) < MIN_USEFUL_CHARS:
             print(
