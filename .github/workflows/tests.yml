@@ -23,6 +23,17 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        exclude:
+          # macOS runners are the scarcest in GitHub's free pool: a macOS 3.9
+          # job sat queued for 30 minutes and was auto-cancelled without ever
+          # starting (no log blob at all). macOS keeps the two newest versions,
+          # which is enough to prove the code is not platform-specific there.
+          - os: macos-latest
+            python-version: "3.9"
+          - os: macos-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.11"
     steps:
       - uses: actions/checkout@v4
 
