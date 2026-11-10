@@ -21,8 +21,42 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install package with dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # reportlab 5.x refuses to import on Python < 3.10 (it raises
+          # ImportError from reportlab/__init__.py), so on 3.9 we stay on the
+          # 4.x line, which supports 3.9 and has the same API we use.
+          python -m pip install -e ".[dev]" "reportlab<5"
+
+      - name: Check the installed reportlab version
+        run: python -c "import reportlab, sys; print(sys.version.split()[0], '-> reportlab', reportlab.Version)"
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+  # ubuntu-latest currently resolves to Ubuntu 26.04, and actions/python-versions
+  # has no 3.9 build for it ("The version '3.9' with architecture 'x64' was not
+  # found for Ubuntu 26.04"). Python 3.9 is therefore covered on the two
+  # platforms that still ship it: Windows and macOS.
+  test-ubuntu:
+    name: Python ${{ matrix.python-version }} on ubuntu-latest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
