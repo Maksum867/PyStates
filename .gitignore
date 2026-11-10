@@ -42,3 +42,11 @@ venv.bak/
 *.md
 *.txt
 !README.md
+# Build artefacts
+dist/
+build/
+*.egg-info/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/

@@ -4,7 +4,7 @@
 
 > **A lightweight, elegant Python CLI tool for fetching clean, distraction-free web articles.**
 
-[![Python](https://img.shields.io/badge/python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Trafilatura](https://img.shields.io/badge/powered_by-trafilatura-FF6B6B?style=for-the-badge)](https://github.com/adbar/trafilatura)
 
@@ -39,7 +39,7 @@ pystates -u https://www.newyorker.com/magazine/2025/01/20/the-new-ai-era
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/pystates.git
+git clone https://github.com/Maksum867/PyStates.git
 cd pystates
 
 # 2. Install in editable/development mode
@@ -54,10 +54,10 @@ pystates --help
 
 ### Requirements
 
-- Python ≥ 3.10
+- Python ≥ 3.9
 - `pip`
 
-All dependencies (`requests`, `trafilatura`, `argparse`) are automatically installed via `pyproject.toml`.
+All dependencies (`requests`, `trafilatura`) are installed automatically via `pyproject.toml`. `argparse` ships with Python.
 
 ## 🖥️ Usage
 
@@ -73,7 +73,10 @@ pystates -u URL [OPTIONS]
 |-------|-------------|----------|---------|-------------|
 | `-u`  | `--url`     | **Yes**  | —       | The full URL of the article to fetch and process |
 | `-f`  | `--format`  | No       | `md`    | Output format. Accepted values: `md` or `txt` |
-| `-o`  | `--output`  | No       | *(auto)* | Custom output filename **without extension**. If omitted, a sanitized version of the article title is used |
+| `-o`  | `--output`  | No       | *(auto)* | Custom output filename. Any directory component is stripped; a matching extension is normalised |
+| `-d`  | `--output-dir` | No    | `.`      | Directory to write the file into |
+| `-q`  | `--quiet`   | No       | off     | Suppress progress output (useful in cron jobs and CI) |
+|       | `--version` | No       | —       | Print the version and exit |
 
 ### Examples
 
@@ -123,9 +126,9 @@ pystates --help
 ```markdown
 # The New AI Era
 
-**By Jane Smith**  
-*Published: January 20, 2025*  
-*Source: The New Yorker*
+*By Jane Smith · 2025-01-20 · The New Yorker*
+
+<https://www.newyorker.com/culture/cultural-comment/the-end-of-the-internet-as-we-know-it>
 
 ---
 
@@ -147,10 +150,39 @@ PyStates/
 │   ├── cli.py               # Argument parsing (argparse)
 │   ├── exporters.py         # Filename sanitization + .md/.txt formatting
 │   └── parser.py            # HTTP fetching (custom UA) + Trafilatura parsing
+│   └── tests/               # 75 pytest tests (unit + real-HTTP integration)
+├── .github/
+│   ├── workflows/
+│   │   ├── tests.yml        # pytest matrix, lint, packaging
+│   │   └── publish.yml      # build + publish to PyPI (Trusted Publishing)
+│   └── dependabot.yml       # automatic dependency updates
 ├── pyproject.toml           # Modern packaging + entry points
+├── CHANGELOG.md
 ├── .gitignore
 └── README.md
 ```
+
+## 🧪 Development & Testing
+
+```bash
+git clone https://github.com/Maksum867/PyStates.git
+cd PyStates
+pip install -e ".[dev]"
+python -m pytest            # 75 tests, no network access required
+ruff check . && ruff format --check .
+```
+
+The suite includes a real end-to-end run against a local `http.server`, so it
+verifies the whole pipeline (download → extract → sanitize → write) without
+touching the internet.
+
+### Releasing
+
+1. Bump the version in `pyproject.toml` and `pystates/__init__.py`.
+2. Update `CHANGELOG.md`.
+3. Publish a GitHub Release tagged `vX.Y.Z`.
+4. `.github/workflows/publish.yml` runs the tests, builds the distributions and
+   publishes to PyPI via Trusted Publishing (no API token needed).
 
 ## 📜 License
 

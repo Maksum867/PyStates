@@ -1,34 +1,87 @@
+"""Command-line interface for PyStates."""
+
+from __future__ import annotations
+
 import argparse
 import sys
 
-
-from pystates.parser import fetch_and_parse_article
+from pystates import __version__
 from pystates.exporters import save_article
+from pystates.parser import ParseError, fetch_and_parse_article
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Download and save web articles")
-    parser.add_argument('-u', '--url', required=True, help="URL to article")
-    parser.add_argument('-f', '--format', default='md', choices=['md', 'txt'], help="Output format (md or txt)")
-    parser.add_argument('-o', '--output', default=None, help="Custom output filename")
+def build_parser() -> argparse.ArgumentParser:
+    from pystates.exporters import SUPPORTED_FORMATS as FORMATS
 
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        prog="pystates",
+        description="Download a web article and save it as clean Markdown or plain text.",
+    )
+    parser.add_argument("-u", "--url", required=True, help="URL of the article to fetch")
+    parser.add_argument(
+        "-f",
+        "--format",
+        default="md",
+        choices=list(FORMATS),
+        help="Output format (default: md)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=None,
+        help="Custom output filename, with or without extension",
+    )
+    parser.add_argument(
+        "-d",
+        "--output-dir",
+        default=None,
+        help="Directory to write the file into (default: current directory)",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Suppress progress output",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
 
     try:
-        print(f"Downloading article from: {args.url}...")
-        article_data = fetch_and_parse_article(args.url)
+        if not args.quiet:
+            print(f"Downloading article from: {args.url}...")
+
+        article = fetch_and_parse_article(args.url)
 
         saved_file = save_article(
-            title=article_data["title"],
-            content=article_data["content"],
+            title=article["title"],
+            content=article["content"],
             output_format=args.format,
-            custom_filename=args.output
+            custom_filename=args.output,
+            output_dir=args.output_dir,
+            author=article.get("author"),
+            date=article.get("date"),
+            sitename=article.get("sitename"),
+            url=args.url,
         )
-        print(f"Saved article to: {saved_file}")
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+        if not args.quiet:
+            print(f"Saved article to: {saved_file}")
+        return 0
+    except ParseError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:  # network errors, permission errors, ...
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

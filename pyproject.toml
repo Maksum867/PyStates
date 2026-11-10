@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pystates-CLI"
-version = "0.1.0"
+version = "0.2.0"
 description = "CLI tool to download and save articles from various web resources into Markdown, Text, and other formats."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Maksym Khlystun" }
 ]
@@ -17,36 +18,57 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Markup",
     "Topic :: Utilities",
 ]
-
 
 dependencies = [
     "requests>=2.31.0",
     "trafilatura>=1.6.0",
-    "rich>=13.0.0",
 ]
 
-
 [project.optional-dependencies]
-pdf = [
-    "reportlab>=4.0.0",
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "build>=1.0",
+    "twine>=5.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/pystates"
-Repository = "https://github.com/yourusername/pystates"
-Issues = "https://github.com/yourusername/pystates/issues"
-
+Homepage = "https://github.com/Maksum867/PyStates"
+Repository = "https://github.com/Maksum867/PyStates"
+Issues = "https://github.com/Maksum867/PyStates/issues"
+Changelog = "https://github.com/Maksum867/PyStates/blob/main/CHANGELOG.md"
 
 [project.scripts]
 pystates = "pystates.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["pystates*"]
+
+[tool.pytest.ini_options]
+testpaths = ["pystates/tests"]
+addopts = "-q"
+filterwarnings = [
+    "error::DeprecationWarning:pystates.*",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+    # Keep the config minimal; add rules here only when a false positive appears.
+]
